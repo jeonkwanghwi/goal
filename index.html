@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>비전 대시보드 v13 (Masterpiece)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <link id="favicon" rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✨</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Pretendard', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .grid-accordion {
+            display: grid;
+            grid-template-rows: 0fr;
+            transition: grid-template-rows 0.4s ease-in-out;
+        }
+        .grid-accordion.open {
+            grid-template-rows: 1fr;
+        }
+        .grid-accordion > div {
+            overflow: hidden;
+        }
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .tab-panel.hidden { display: none; }
+        .animated-gradient {
+            background: linear-gradient(-45deg, #a8e6cf, #dcedc1, #ffd3b6, #ffaaa5);
+            background-size: 400% 400%;
+            animation: gradientFlow 10s ease infinite;
+        }
+        @keyframes gradientFlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .stagger-in {
+            animation: cardFadeIn 0.5s ease-out both;
+            animation-delay: calc(var(--i, 0) * 80ms);
+        }
+        @keyframes cardFadeIn {
+            from { opacity: 0; transform: translateY(20px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .pulsing-button {
+            animation: pulse 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(2, 132, 199, 0.4); }
+            50% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(2, 132, 199, 0); }
+        }
+        .clickable { transition: transform 0.1s ease; }
+        .clickable:active { transform: scale(0.97); }
+        
+        .tab-nav-container { position: relative; }
+        .tab-underline {
+            position: absolute;
+            bottom: -1px;
+            height: 3px;
+            background-color: #0ea5e9;
+            border-radius: 1.5px;
+            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+</head>
+<body class="bg-slate-50">
+
+    <div class="flex h-screen">
+        <aside class="w-64 bg-white border-r border-slate-200 flex flex-col shrink-0">
+            <div class="p-6 text-center border-b border-slate-200">
+                <h1 class="text-2xl font-bold text-sky-600 tracking-wider">VISION BOARD</h1>
+            </div>
+            <nav id="user-selector" class="flex-1 p-3 space-y-1"></nav>
+        </aside>
+
+        <main id="dashboard-container" class="flex-1 p-6 sm:p-8 lg:p-10 overflow-y-auto animated-gradient">
+            <div id="initial-view" class="flex items-center justify-center h-full">
+                <div class="text-center text-slate-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-16 w-16 text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2h8a2 2 0 002-2v-1a2 2 0 012-2h1.945M7.758 16.586l.002-.001M16.242 16.586l.002-.001M12 18.75a.75.75 0 100-1.5.75.75 0 000 1.5zM12 6.75a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5z" /></svg>
+                    <h2 class="mt-4 text-2xl font-semibold">비전 보드에 오신 것을 환영합니다</h2>
+                    <p class="mt-2 text-slate-400">왼쪽에서 사용자를 선택하여 여정을 시작하세요.</p>
+                </div>
+            </div>
+            <div id="user-dashboard" class="hidden">
+                <div class="flex flex-col lg:flex-row gap-8">
+                    <!-- 메인 콘텐츠 (좌측) -->
+                    <div class="flex-1">
+                        <header id="user-header" class="mb-8"></header>
+                        <div id="tab-nav-container" class="tab-nav-container border-b border-slate-200">
+                            <nav id="tab-nav" class="flex space-x-2 sm:space-x-4"></nav>
+                            <div id="tab-underline" class="tab-underline"></div>
+                        </div>
+                        <div id="tab-content" class="mt-8"></div>
+                    </div>
+                    <!-- 자기소개 (우측) -->
+                    <div id="intro-container" class="w-full lg:w-72 shrink-0">
+                        <!-- 자기소개 박스가 여기에 렌더링됩니다. -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // --- 데이터 영역 ---
+        const usersData = [
+            {
+                id: 'user1', name: '전광휘', position: '직딩', avatar: 'https://placehold.co/100x100/dbeafe/3b82f6?text=J',
+                introduction: "공부는 싫지만 도움되는 사람은 되고싶어서 억지로 공부하는 사람",
+                goals: {
+                    short: [
+                        { title: '매일 영어 단어 20개 외우기!', details: '목표 설명 간단히 : 장기적으로 영어의 신이 되겠다.', reason: '목표 적은 이유 : 19살때부터 꿈꿔온 영어 잘하는 사람이 되기 위해.' },
+                        { title: '네트워크관리사 2급 자격증 따기!', details: '목표 설명 간단히 : 이것도 못따면 회사에 있을 자격이 없다.', reason: '목표 적은 이유 : 네트워크 기초 다지기.' },
+                        { title: '1년에 책 3권 읽기!', details: '목표 설명 간단히 : 1년은 무슨 5년에 책 1권 읽는 나에겐 큰 도전.', reason: '목표 적은 이유 : 글쓰기/말하기/어휘 모두 잡아보자.' },
+                        { title: '엄빠 모시고 국내외 여행 가기!', details: '목표 설명 간단히 : 엄마아빠를 버리고 여행다니는 불효자.', reason: '목표 적은 이유 : 마지막 여행이 초6이었다는 것을 깨달아버림.' },
+                        { title: '카톡 챗봇 만들기!', details: '목표 설명 간단히 : 읽씹 방지봇 만들기.', reason: '목표 적은 이유 : 톡방 경제 살리기.' }
+                    ],
+                    mid: [
+                        { title: '네트워크, AI, 영어 모두 레벨 3 달성!', details: '목표 설명 간단히 : 3레벨이란, 설명할 줄 알고 스스로 자신감이 있어서 능동적인 상태라고 생각함.', reason: '목표 적은 이유 : 도움이 되고 필요한 사람이 되어 대체 불가능한 사람이 되자.' },
+                        { title: '1년에 책 12권 읽기!', details: '목표 설명 간단히 : 한달에 책 한권 읽기 !!!!!!!!', reason: '목표 적은 이유 : 독서하는 사람은 보통 멋진 사람이더라.' }
+                    ],
+                    long: [
+                        { title: '책 출판하기!', details: '목표 설명 간단히 : 평소 메모를 자주 하는데, 그걸 모아서 출판해보고싶다.', reason: '목표 적은 이유 : 쌓인 메모를 활용해보고 싶어서.' },
+                        { title: '파파고 없이 영어권 여행하기!', details: '목표 설명 간단히 : 영어의 신이 되어 프리토킹 해보고싶다.', reason: '목표 적은 이유 : 10년간 못이룬 꿈, 그 다음 10년엔 이뤄보고싶어서.' },
+                        { title: '1년에 책 12권 이상 읽기!', details: '목표 설명 간단히 : 12권 이상의 책을 꾸준히 자발적으로 읽어보자.', reason: '목표 적은 이유 : 평생의 습관으로 길들이자.' }
+                    ]
+                }
+            },
+            {
+                id: 'user2', name: '한예원', position: '학생', avatar: 'https://placehold.co/100x100/dbeafe/3b82f6?text=H',
+                introduction: "새로운 도전을 두려워하지 않고 꾸준히 성장하는 삶을 지향합니다. 목표를 향해 한 걸음씩 나아가겠습니다!",
+                goals: { short: [], mid: [ { title: '새로운 목표 설정', details: '구체적인 목표를 세우고 실천하기', reason: '더 나은 미래를 만들기 위해서입니다.' } ], long: [] }
+            },
+            {
+                id: 'user3', name: '임연우', position: '학생', avatar: 'https://placehold.co/100x100/dbeafe/3b82f6?text=Y',
+                introduction: "대구의 자랑, 대구의 아들, 나 임연우",
+                goals: {
+                    short: [
+                        { title: '일주일 4번 달리기 (5 KM)', details: '목표 설명 간단히 : 장충문화체육관에서 런닝머신', reason: '목표 적은 이유 : 현 체중(69KG)에서 5KG 감량을 위해' },
+                        { title: '하루 순공 5시간', details: '목표 설명 간단히 : 하루 순공 5시간', reason: '목표 적은 이유 : 공부 좀 하라고' }
+                    ],
+                    mid: [
+                        { title: '취업 후 일본어, 영어 공부 및 여행', details: '목표 설명 간단히 : 일본어는 EBS강의, 영어는 스피킹 위주로 공부', reason: '목표 적은 이유 : 여행가서 회화를 하려고' },
+                        { title: '경매 공부', details: '목표 설명 간단히 : 경매 공부 후 입찰 및 낙찰 받기', reason: '목표 적은 이유 : 자산 증식' }
+                    ],
+                    long: [
+                        { title: '다가구주택 마련', details: '목표 설명 간단히 : 다가구 운영 및 임대료 수취', reason: '목표 적은 이유 : 꾸준한 현금흐름 창출과 노후 대비' },
+                        { title: '결혼', details: '목표 설명 간단히 : 딸1, 아들1', reason: '목표 적은 이유 : 혼자 살면 쓸쓸하자나. 무지성 내 편 만들어야지' }
+                    ]
+                }
+            },
+            {
+                id: 'user4', name: '오성훈', position: '프로젝트 매니저', avatar: 'https://placehold.co/100x100/dbeafe/3b82f6?text=O',
+                introduction: "성공적인 프로젝트는 '사람'에서 시작된다고 믿습니다. 원활한 커뮤니케이션과 긍정적인 팀워크를 가장 중요하게 생각합니다.",
+                goals: { short: [], mid: [ { title: '유튜브 채널 개설 및 운영', details: 'IT 기기 리뷰 콘텐츠, 주 1회 영상 업로드', reason: '제가 가진 지식과 경험을 공유하며 사람들과 소통하고 싶습니다.' } ], long: [] }
+            },
+            {
+                id: 'user5', name: '임현택', position: '개발자', avatar: 'https://placehold.co/100x100/dbeafe/3b82f6?text=I',
+                introduction: "새로운 기술을 배우고 창의적인 솔루션을 만드는 것을 좋아합니다. 끊임없이 성장하며 더 나은 서비스를 만들어가겠습니다.",
+                goals: { short: [], mid: [ { title: '오픈소스 프로젝트 기여', details: 'GitHub에서 인기 있는 프로젝트에 기여하기', reason: '개발자 커뮤니티에 기여하고 싶어서입니다.' } ], long: [] }
+            },
+            {
+                id: 'user6', name: '사공태', position: '디자이너', avatar: 'https://placehold.co/100x100/dbeafe/3b82f6?text=S',
+                introduction: "사용자 경험을 중심으로 한 디자인을 추구합니다. 아름다움과 기능성을 모두 만족시키는 디자인을 만들고 싶어요.",
+                goals: { short: [], mid: [ { title: '디자인 포트폴리오 완성', details: '다양한 프로젝트로 포트폴리오 구성하기', reason: '더 나은 기회를 얻기 위해서입니다.' } ], long: [] }
+            },
+            {
+                id: 'user7', name: '나정호', position: '마케터', avatar: 'https://placehold.co/100x100/dbeafe/3b82f6?text=N',
+                introduction: "데이터 기반의 마케팅 전략을 수립하고 실행하는 것을 좋아합니다. 고객의 니즈를 파악하여 효과적인 캠페인을 만들어가겠습니다.",
+                goals: { short: [], mid: [ { title: '디지털 마케팅 자격증 취득', details: '구글 애널리틱스, 페이스북 블루프린트 등 자격증 취득', reason: '전문성을 높이고 싶어서입니다.' } ], long: [] }
+            },
+            {
+                id: 'user8', name: '권태영', position: '기획자', avatar: 'https://placehold.co/100x100/dbeafe/3b82f6?text=K',
+                introduction: "사용자 중심의 서비스 기획을 통해 가치 있는 제품을 만드는 것을 목표로 합니다. 창의적인 아이디어로 문제를 해결하고 싶어요.",
+                goals: { short: [], mid: [ { title: '서비스 기획 스터디 참여', details: '다양한 서비스 기획 사례 분석 및 토론', reason: '기획 역량을 키우고 싶어서입니다.' } ], long: [] }
+            },
+            {
+                id: 'user9', name: '김주완', position: '데이터 사이언티스트', avatar: 'https://placehold.co/100x100/dbeafe/3b82f6?text=J',
+                introduction: "데이터를 통해 숨겨진 인사이트를 발견하고 비즈니스에 가치를 창출하는 것을 좋아합니다. 머신러닝과 AI 기술에 관심이 많아요.",
+                goals: { short: [], mid: [ { title: '머신러닝 프로젝트 완성', details: '실제 데이터를 활용한 예측 모델 개발', reason: 'AI 기술을 실무에 적용해보고 싶어서입니다.' } ], long: [] }
+            }
+        ];
+        
+        const goalTypes = [ 
+            { key: 'short', title: '🚀 단기 목표', header: '단기 집중 과제' }, 
+            { key: 'mid', title: '🏃‍♂️ 중기 목표', header: '성장을 위한 여정' }, 
+            { key: 'long', title: '🏆 장기 목표', header: '인생의 최종 비전' } 
+        ];
+
+        // --- DOM 요소 ---
+        const userSelector = document.getElementById('user-selector');
+        const initialView = document.getElementById('initial-view');
+        const userDashboard = document.getElementById('user-dashboard');
+        const userHeader = document.getElementById('user-header');
+        const tabNavContainer = document.getElementById('tab-nav-container');
+        const tabNav = document.getElementById('tab-nav');
+        const tabUnderline = document.getElementById('tab-underline');
+        const tabContent = document.getElementById('tab-content');
+        const introContainer = document.getElementById('intro-container');
+        
+        let activeUser = null;
+        let activeTab = 'short';
+
+        // --- UX 개선: 진짜 물방울 소리 (FMSynth) ---
+        const synth = new Tone.FMSynth({
+            harmonicity: 8,
+            modulationIndex: 2,
+            envelope: {
+                attack: 0.001,
+                decay: 0.3,
+                sustain: 0,
+                release: 0.3,
+            },
+            modulationEnvelope: {
+                attack: 0.002,
+                decay: 0.2,
+                sustain: 0,
+                release: 0.2
+            }
+        }).toDestination();
+
+        const playSound = (note, rampToNote) => {
+            if (Tone.context.state !== 'running') {
+                Tone.start();
+            }
+            synth.triggerAttackRelease(note, "8n", Tone.now());
+            if (rampToNote) {
+                synth.frequency.rampTo(rampToNote, 0.1);
+            }
+        }
+
+        // --- 함수 영역 ---
+        
+        function updateFavicon(initial) {
+            const favicon = document.getElementById('favicon');
+            const canvas = document.createElement('canvas');
+            canvas.width = 64; canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#0ea5e9';
+            ctx.fillRect(0, 0, 64, 64);
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 40px Pretendard, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(initial, 32, 34);
+            favicon.href = canvas.toDataURL('image/png');
+        }
+
+        function renderUserButtons() {
+            userSelector.innerHTML = usersData.map(user => `
+                <a href="#" data-user-id="${user.id}" class="clickable flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-all duration-200 relative ${user.id === activeUser ? 'bg-sky-100/80 text-sky-700' : 'text-slate-600 hover:bg-slate-100'}">
+                    ${user.id === activeUser ? '<div class="absolute left-0 top-0 bottom-0 w-1 bg-sky-500 rounded-r-full"></div>' : ''}
+                    <img src="${user.avatar}" alt="${user.name}" class="w-9 h-9 rounded-full">
+                    <span>${user.name}</span>
+                </a>
+            `).join('');
+        }
+        
+        function renderDashboard(userId) {
+            const user = usersData.find(u => u.id === userId);
+            if (!user) return;
+            initialView.style.display = 'none';
+            userDashboard.classList.remove('hidden');
+            userDashboard.classList.add('fade-in');
+            updateFavicon(user.name.charAt(0));
+            updateDashboard(user);
+        }
+
+        function updateDashboard(user) {
+            const currentGoalType = goalTypes.find(g => g.key === activeTab);
+            userHeader.innerHTML = `<h2 class="text-4xl font-bold text-slate-800">${currentGoalType.header}</h2>`;
+
+            tabNav.innerHTML = goalTypes.map(type => {
+                const goalsOfType = user.goals[type.key];
+                return `<button data-tab-key="${type.key}" class="clickable tab-button relative whitespace-nowrap p-4 text-base font-semibold transition-colors duration-200 flex items-center gap-2 ${type.key === activeTab ? 'text-sky-600' : 'text-slate-500 hover:text-slate-700'}">
+                    ${type.title} <span class="bg-slate-200 text-slate-600 text-xs font-bold px-2 py-0.5 rounded-full">${goalsOfType.length}</span>
+                </button>`;
+            }).join('');
+            
+            requestAnimationFrame(moveUnderline);
+            renderTabContent(user);
+            renderIntroduction(user);
+        }
+        
+        function moveUnderline() {
+            const activeButton = tabNav.querySelector(`[data-tab-key="${activeTab}"]`);
+            if (activeButton) {
+                tabUnderline.style.left = `${activeButton.offsetLeft}px`;
+                tabUnderline.style.width = `${activeButton.offsetWidth}px`;
+            }
+        }
+
+        function renderIntroduction(user) {
+            introContainer.innerHTML = `
+                <div class="stagger-in bg-white/60 backdrop-blur-lg rounded-xl shadow-lg border border-white/30 p-6 sticky top-8" style="--i: 0;">
+                    <div class="flex flex-col items-center text-center">
+                        <img src="${user.avatar}" alt="${user.name}" class="w-24 h-24 rounded-full shadow-lg border-4 border-white mb-4">
+                        <h3 class="text-2xl font-bold text-slate-800">${user.name}</h3>
+                        <p class="text-sm text-slate-500 mb-4">${user.position}</p>
+                        <p class="text-slate-600 text-sm leading-relaxed">"${user.introduction}"</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderTabContent(user) {
+            tabContent.innerHTML = goalTypes.map(type => `
+                <div id="panel-${type.key}" class="tab-panel ${type.key !== activeTab ? 'hidden' : ''}">
+                    <div class="space-y-5">
+                        ${user.goals[type.key].length > 0
+                            ? user.goals[type.key].map((goal, index) => `
+                                <div class="goal-card stagger-in clickable bg-white/60 backdrop-blur-lg rounded-xl shadow-lg border border-white/30 overflow-hidden group cursor-pointer" style="--i: ${index};">
+                                    <div class="goal-header flex items-center justify-between p-5 gap-4">
+                                        <span class="goal-title font-semibold text-slate-800 flex-1">${goal.title}</span>
+                                        <div class="expand-button p-1 text-slate-400 group-hover:text-sky-500">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 transition-transform duration-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                                        </div>
+                                    </div>
+                                    <div class="grid-accordion">
+                                        <div><div class="px-5 pb-5 pt-2 border-t border-slate-200/80 text-sm space-y-4">
+                                            <div><h4 class="font-semibold text-sky-600 mb-1">세부 내용</h4><p class="text-slate-600 leading-relaxed">${goal.details}</p></div>
+                                            <div><h4 class="font-semibold text-slate-500 mt-4 mb-1">이유</h4><p class="text-slate-500 leading-relaxed">${goal.reason}</p></div>
+                                        </div></div>
+                                    </div>
+                                </div>
+                            `).join('')
+                            : `<div class="bg-white/70 backdrop-blur-sm rounded-lg p-8 text-center text-slate-500 shadow-md border border-white/30">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-teal-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                <p class="mb-4 text-lg font-semibold">새로운 목표를 세울 시간입니다!</p>
+                                <p class="text-slate-400 mb-6">위대한 여정의 첫걸음을 내딛어 보세요.</p>
+                                <button class="pulsing-button clickable bg-sky-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-sky-600 transition-colors text-base shadow-lg">✨ 새로운 목표 추가하기</button>
+                               </div>`
+                        }
+                    </div>
+                </div>
+            `).join('');
+
+            const activePanel = document.getElementById(`panel-${activeTab}`);
+            if (activePanel) {
+                activePanel.classList.add('active');
+                const firstCard = activePanel.querySelector('.goal-card');
+                if (firstCard) {
+                    setTimeout(() => {
+                        const accordion = firstCard.querySelector('.grid-accordion');
+                        const icon = firstCard.querySelector('svg');
+                        accordion.classList.add('open');
+                        icon.classList.add('rotate-180');
+                    }, 50);
+                }
+            }
+        }
+
+        // --- 이벤트 리스너 ---
+
+        userSelector.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetButton = e.target.closest('a');
+            if (targetButton && targetButton.dataset.userId !== activeUser) {
+                playSound("C5");
+                activeUser = targetButton.dataset.userId;
+                activeTab = 'short';
+                renderUserButtons();
+                renderDashboard(activeUser);
+            }
+        });
+
+        userDashboard.addEventListener('click', (e) => {
+            const tabButton = e.target.closest('.tab-button');
+            
+            if (tabButton && tabButton.dataset.tabKey !== activeTab) {
+                playSound("C5");
+                activeTab = tabButton.dataset.tabKey;
+                const user = usersData.find(u => u.id === activeUser);
+                updateDashboard(user);
+            }
+
+            const card = e.target.closest('.goal-card');
+            if (card) {
+                const accordion = card.querySelector('.grid-accordion');
+                const isOpen = accordion.classList.contains('open');
+
+                const allCards = card.closest('.space-y-5').querySelectorAll('.goal-card');
+                allCards.forEach(otherCard => {
+                    otherCard.querySelector('.grid-accordion').classList.remove('open');
+                    otherCard.querySelector('svg').classList.remove('rotate-180');
+                });
+
+                if (!isOpen) {
+                    playSound("C5", "G4"); // "또잉~" 효과
+                    accordion.classList.add('open');
+                    card.querySelector('svg').classList.add('rotate-180');
+                } else {
+                    playSound("C4"); // 닫을 땐 낮은 '똑' 소리
+                }
+            }
+        });
+        
+        window.addEventListener('resize', moveUnderline);
+
+        // --- 초기화 ---
+        renderUserButtons();
+
+    </script>
+</body>
+</html>
